@@ -1,0 +1,29 @@
+[
+  {
+    "name": "Dave",
+    "surname": "Shapel",
+    "email": "dave.shapelly@hotmail.co.uk",
+    "dob": "02/04/1947",
+    "avatar": "",
+    "_id": "cu071ngsdfsdkou22dhf",
+    "createdAt": "2021-05-18T13:11:53.282Z"
+  },
+  {
+    "name": "Tom",
+    "surname": "Shapel",
+    "email": "dave.shapelly@hotmail.co.uk",
+    "dob": "02/04/1947",
+    "avatar": "",
+    "_id": "cu071ng32kou22dhf",
+    "createdAt": "2021-05-18T13:11:53.282Z"
+  },
+  {
+    "name": "Daniel",
+    "surname": "Shapel",
+    "email": "dave.shapelly@hotmail.co.uk",
+    "dob": "02/04/1947",
+    "avatar": "",
+    "_id": "cu071ngsdfsdkou22dhf",
+    "createdAt": "2021-05-18T13:11:53.282Z"
+  }
+]
