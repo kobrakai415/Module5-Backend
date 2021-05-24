@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Email",
+    "surname": "Test",
+    "email": "dave.shapelly@hotmail.com",
+    "dob": "02/04/1947",
+    "avatar": "",
+    "createdOn": "2021-05-18T14:12:22.668Z",
+    "_id": "cu07amkkou485xp"
+  },
+  {
+    "name": "Tom",
+    "surname": "Shapel",
+    "email": "dave.shapelly@hotmail.co.uk",
+    "dob": "02/04/1947",
+    "avatar": "http://localhost:3001/images/authorAvatars/cu071ng32kou22dhf.jpg",
+    "_id": "cu071ng32kou22dhf",
+    "createdOn": "2021-05-18T13:11:53.282Z"
+  }
+]
