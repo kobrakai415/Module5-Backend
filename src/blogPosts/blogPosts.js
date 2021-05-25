@@ -104,7 +104,7 @@ const cloudinaryStorage = new CloudinaryStorage({
 
 const upload = multer({
     storage: cloudinaryStorage
-}).single("blogCovers")
+}).single("blogCover")
 
 
 router.post("/:id/uploadCover", upload, async (req, res, next) => {
