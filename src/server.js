@@ -4,7 +4,7 @@ import {join, dirname} from "path"
 import {fileURLToPath} from "url"
 import listEndpoints from "express-list-endpoints"
 import userRoutes from "./authors/authors.js"
-import postRoutes from "./blogPosts/blogposts.js"
+import postRoutes from "./blogPosts/blogPosts.js"
 import {badRequestErrorHandler, notFoundErrorHandler, forbiddenErrorHandler, catchAllErrorHandler} from "./errorHandlers.js"
 
 const publicFolder = join(dirname(fileURLToPath(import.meta.url)), "../public")
