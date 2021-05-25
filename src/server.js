@@ -6,6 +6,7 @@ import listEndpoints from "express-list-endpoints"
 import userRoutes from "./authors/authors.js"
 import postRoutes from "./blogPosts/blogPosts.js"
 import {badRequestErrorHandler, notFoundErrorHandler, forbiddenErrorHandler, catchAllErrorHandler} from "./errorHandlers.js"
+import createError from "http-errors"
 
 const publicFolder = join(dirname(fileURLToPath(import.meta.url)), "../public")
 
@@ -17,10 +18,17 @@ const whiteList = [process.env.FRONTEND_DEV_URL, process.env.FRONTEND_CLOUD_URL]
 const corsOptions = {
     origin: function (origin, next) {
         console.log(origin)
-        if(whiteList.indexOf(origin) !== -1) {
-            next(null, true)
-        } else {
-        next(new Error("Origin problem"))
+        try {
+
+            if(whiteList.indexOf(origin) !== -1) {
+                console.log(origin)
+                next(null, true)
+            } else {
+            next(createError(500, "Origin Problem!"))
+            }
+            
+        } catch (error) {
+            next(error)
         }
     }
 }

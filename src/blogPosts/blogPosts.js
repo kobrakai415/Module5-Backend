@@ -9,6 +9,8 @@ import { validationResult } from "express-validator"
 import multer from "multer"
 import fs from "fs-extra"
 import { getBlogPosts, writeBlogs, writeBlogCovers } from "../helpers/files.js"
+import { v2 as cloudinary } from "cloudinary"
+import { CloudinaryStorage } from "multer-storage-cloudinary"
 
 const { readJSON, writeJSON, writeFile, createReadStream } = fs
 
@@ -93,7 +95,19 @@ router.delete("/:id", async (req, res, next) => {
 
 })
 
-router.post("/:id/uploadCover", multer().single("blogCover"), async (req, res, next) => {
+const cloudinaryStorage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+        folder: "blogCovers"
+    }
+})
+
+const upload = multer({
+    storage: cloudinaryStorage
+}).single("blogCovers")
+
+
+router.post("/:id/uploadCover", upload, async (req, res, next) => {
     try {
         console.log(req.file)
         const blogs = await getBlogPosts()
@@ -101,9 +115,7 @@ router.post("/:id/uploadCover", multer().single("blogCover"), async (req, res, n
         let blog = blogs.find(blog => blog._id === req.params.id)
         if (!blog) { next(createError(400, "id does not match")) }
 
-        await writeBlogCovers(req.params.id + ".jpg", req.file.buffer)
-
-        blog.cover = `http://localhost:3001/images/blogCovers/${req.params.id}.jpg`
+        blog.cover = req.file.path
 
         const newBlogs = blogs.filter(blog => blog._id !== req.params.id)
         newBlogs.push(blog)
