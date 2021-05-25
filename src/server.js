@@ -7,17 +7,30 @@ import userRoutes from "./authors/authors.js"
 import postRoutes from "./blogPosts/blogposts.js"
 import {badRequestErrorHandler, notFoundErrorHandler, forbiddenErrorHandler, catchAllErrorHandler} from "./errorHandlers.js"
 
-const server = express()
-const port = 3001
 const publicFolder = join(dirname(fileURLToPath(import.meta.url)), "../public")
 
-server.use(cors())
+const server = express()
+const port = process.env.PORT || 3001
+
+const whiteList = [process.env.FRONTEND_DEV_URL, process.env.FRONTEND_CLOUD_URL]
+
+const corsOptions = {
+    origin: function (origin, next) {
+
+        if(whiteList.indexOf(origin) !== -1) {
+            next(null, true)
+        } else {
+        next(new Error("Origin problem"))
+        }
+    }
+}
+
 server.use(express.json())
 server.use(express.static(publicFolder))
+server.use(cors(corsOptions))
 
 server.use("/authors", userRoutes)
 server.use("/blogposts", postRoutes)
-
 
 server.use(badRequestErrorHandler)
 server.use(notFoundErrorHandler)
