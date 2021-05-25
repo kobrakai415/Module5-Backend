@@ -16,7 +16,7 @@ const whiteList = [process.env.FRONTEND_DEV_URL, process.env.FRONTEND_CLOUD_URL]
 
 const corsOptions = {
     origin: function (origin, next) {
-
+        console.log(origin)
         if(whiteList.indexOf(origin) !== -1) {
             next(null, true)
         } else {
