@@ -11,6 +11,8 @@ import fs from "fs-extra"
 import { getBlogPosts, writeBlogs, writeBlogCovers } from "../helpers/files.js"
 import { v2 as cloudinary } from "cloudinary"
 import { CloudinaryStorage } from "multer-storage-cloudinary"
+import { generatePDFStream } from "../helpers/pdf.js"
+import { pipeline } from "stream"
 
 const { readJSON, writeJSON, writeFile, createReadStream } = fs
 
@@ -108,7 +110,6 @@ const upload = multer({
     
 }).single("blogCover")
 
-
 router.post("/:id/uploadCover", upload, async (req, res, next) => {
     try {
         console.log(req.file)
@@ -125,6 +126,27 @@ router.post("/:id/uploadCover", upload, async (req, res, next) => {
 
         res.status(200).send("Image uploaded successfully")
 
+    } catch (error) {
+        next(error)
+    }
+})
+
+router.get("/downloadPDF/:id", async (req, res, next) => {
+    try {
+    const data = await getBlogPosts()
+    const blogContent = data.find(blog => blog._id === req.params.id.toString())
+
+    if(blogContent) {
+        const source = await generatePDFStream(blogContent)
+        
+        res.setHeader('Content-Disposition', 'attachment; filename="Example.pdf"')
+      
+        pipeline(source, res, error => next(error))
+
+    } else {
+        next(createError(404, "Blog not found"))
+    }
+        
     } catch (error) {
         next(error)
     }

@@ -35,7 +35,7 @@ const corsOptions = {
 
 server.use(express.json())
 server.use(express.static(publicFolder))
-server.use(cors(corsOptions))
+server.use(cors())
 
 server.use("/authors", userRoutes)
 server.use("/blogposts", postRoutes)
