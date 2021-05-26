@@ -1,7 +1,7 @@
 import express from "express"
 // import fs from "fs"
 import { fileURLToPath } from "url"
-import { dirname, join } from "path"
+import { dirname, join, extname } from "path"
 import uniqid from "uniqid"
 import createError from "http-errors"
 import { postValidation } from "./validation.js"
@@ -98,12 +98,14 @@ router.delete("/:id", async (req, res, next) => {
 const cloudinaryStorage = new CloudinaryStorage({
     cloudinary,
     params: {
-        folder: "blogCovers"
+        folder: "blogCovers",
+        resource_type: "auto"
     }
 })
 
 const upload = multer({
-    storage: cloudinaryStorage
+    storage: cloudinaryStorage,
+    
 }).single("blogCover")
 
 
