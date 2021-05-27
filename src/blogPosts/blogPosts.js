@@ -13,6 +13,7 @@ import { v2 as cloudinary } from "cloudinary"
 import { CloudinaryStorage } from "multer-storage-cloudinary"
 import { generatePDFStream } from "../helpers/pdf.js"
 import { pipeline } from "stream"
+import { sendEmail } from "../helpers/email.js"
 
 const { readJSON, writeJSON, writeFile, createReadStream } = fs
 
@@ -36,6 +37,18 @@ router.get("/", async (req, res, next) => {
     }
 })
 
+router.get("/sendEmail", async (req, res, next) => {
+    try {
+        
+        const [response,...rest] = await sendEmail("kaiwan.kadir@outlook.com")
+        console.log(response)
+        response.statusCode === 202 ? res.send("Email successfully sent!") : next(error)
+      
+    } catch (error) {
+        next(error)
+    }
+})
+
 router.get("/:id", async (req, res) => {
     try {
         const blogs = await getBlogPosts()
@@ -55,6 +68,9 @@ router.post("/", postValidation, async (req, res, next) => {
             const post = { ...req.body, _id: uniqid(), createdOn: new Date() }
             blogs.push(post)
             await writeBlogs(blogs)
+
+            // await sendEmail(email)
+
             res.status(201).send(post)
         } else {
             next(createError(400, errors))
@@ -152,11 +168,11 @@ router.get("/downloadPDF/:id", async (req, res, next) => {
     }
 })
 
-router.get("/blogposts/:id/comments", async (req, res, next) => {
+router.get("/:id/comments", async (req, res, next) => {
 
 })
 
-router.post("/blogposts/:id/comments", async (req, res, next) => {
+router.post("/:id/comments", async (req, res, next) => {
 
 })
 

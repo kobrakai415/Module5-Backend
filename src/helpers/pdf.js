@@ -2,7 +2,7 @@ import axios from "axios"
 import { header } from "express-validator"
 import PdfPrinter from "pdfmake"
 import { getBlogPosts } from "../helpers/files.js"
-
+import striptags from "striptags"
 
 export const generatePDFStream = async data => {
 
@@ -24,17 +24,19 @@ export const generatePDFStream = async data => {
     const docDefinition = {
         content: [
             {
-                text: data.title,
+                text: data.title, bold: true, margin: [0,0,0,20],
                 style: "header"
             },
             {
-                text: data.content.toString()
-
+                image: image,
+                width: 500,
+                height: 250,
+                margin: [0,0,0,10], 
             },
             {
-                image: image,
-                width: 250,
-                height: 250
+                text: striptags(data.content), 
+                fontSize: 15 
+
             }
         ],
 

@@ -15,7 +15,9 @@ export const writeBlogs = async content => await writeJSON(blogPostsFile, conten
 
 export const getAuthors = async () => await readJSON(authorsFile)
 export const writeAuthors = async content => await writeJSON(authorsFile, content)
+export const authorsReadStream = async () => fs.createReadStream(authorsFile)
 
 export const writeBlogCovers = async (fileName, content) => await writeFile(join(blogCoversFolder, fileName), content)
 export const writeAuthorAvatars = async (fileName, content) => await writeFile(join(authorsAvatarFolder, fileName), content)
+
 
