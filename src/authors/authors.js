@@ -6,6 +6,7 @@ import { getAuthors, writeAuthors, writeAuthorAvatars, authorsReadStream } from 
 import { Transform } from "json2csv"
 import { pipeline } from "stream"
 
+
 const router = express.Router()
 
 
@@ -30,6 +31,9 @@ router.get("/exportCSV", async (req, res, next) => {
 
 router.get("/", async (req, res) => {
     await getAuthors().length > 0 ? res.send(authorsArray) : res.send("No data.")
+    // const authors = await authorModel.find()
+
+    // res.send(authors)
 })
 
 router.get("/:id", async (req, res) => {
@@ -56,6 +60,11 @@ router.post("/", async (req, res) => {
 
         res.send(author)
     }
+// const newAuthor = new authorModel(req.body)
+// const id  = await newAuthor.save()
+// res.send(id)
+
+
 })
 
 router.put("/:id", async (req, res) => {

@@ -7,6 +7,7 @@ import userRoutes from "./authors/authors.js"
 import postRoutes from "./blogPosts/blogPosts.js"
 import {badRequestErrorHandler, notFoundErrorHandler, forbiddenErrorHandler, catchAllErrorHandler} from "./errorHandlers.js"
 import createError from "http-errors"
+import mongoose from "mongoose"
 
 const publicFolder = join(dirname(fileURLToPath(import.meta.url)), "../public")
 
@@ -45,9 +46,9 @@ server.use(notFoundErrorHandler)
 server.use(forbiddenErrorHandler)
 server.use(catchAllErrorHandler)
 
-server.listen(port, () => {
+mongoose.connect(process.env.MONGO_CONNECTION, {useNewUrlParser: true, useUnifiedTopology: true}).then(() => server.listen(port, () => {
     console.log("server is running port: ", port)
-})
+})).catch(error => console.log(error))
 
 console.table(listEndpoints(server))
 

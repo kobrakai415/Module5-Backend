@@ -14,6 +14,8 @@ import { CloudinaryStorage } from "multer-storage-cloudinary"
 import { generatePDFStream } from "../helpers/pdf.js"
 import { pipeline } from "stream"
 import { sendEmail } from "../helpers/email.js"
+import blogModel from "../helpers/schema.js"
+import { create } from "domain"
 
 const { readJSON, writeJSON, writeFile, createReadStream } = fs
 
@@ -22,25 +24,35 @@ const router = express.Router()
 const imagesPath = join(dirname(fileURLToPath(import.meta.url)), "../../public/images/blogCovers")
 
 router.get("/", async (req, res, next) => {
-    try {
-        const blogs = await getBlogPosts()
-        if (req.query.title) {
-            const filteredBlogs = blogs.filter(post => post.title.toLowerCase().includes(req.query.title.toLowerCase()))
+    // try {
+    //     const blogs = await getBlogPosts()
+    //     if (req.query.title) {
+    //         const filteredBlogs = blogs.filter(post => post.title.toLowerCase().includes(req.query.title.toLowerCase()))
 
-            filteredBlogs.length > 0 ? res.status(200).send(filteredBlogs) : next(createError(404, `No Blogs with title: ${req.query.title}`))
-        } else {
-            blogs.length > 0 ? res.send(blogs) : next(createError(404, "No blogs available!"))
-        }
-    }
-    catch (error) {
+    //         filteredBlogs.length > 0 ? res.status(200).send(filteredBlogs) : next(createError(404, `No Blogs with title: ${req.query.title}`))
+    //     } else {
+    //         blogs.length > 0 ? res.send(blogs) : next(createError(404, "No blogs available!"))
+    //     }
+    // }
+    // catch (error) {
+    //     next(error)
+    // }
+
+    try {
+        const blogs = await blogModel.find()
+
+        blogs.length > 0 ? res.send(blogs) : next(createError(404, "No blogs available"))
+        
+    } catch (error) {
         next(error)
+        
     }
 })
 
 router.get("/sendEmail", async (req, res, next) => {
     try {
         
-        const [response,...rest] = await sendEmail("kaiwan.kadir@outlook.com")
+        const [response, ...rest] = await sendEmail("kaiwan.kadir@outlook.com")
         console.log(response)
         response.statusCode === 202 ? res.send("Email successfully sent!") : next(error)
       
@@ -49,66 +61,100 @@ router.get("/sendEmail", async (req, res, next) => {
     }
 })
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", async (req, res, next) => {
+    // try {
+    //     const blogs = await getBlogPosts()
+    //     const post = blogs.find(post => post._id === req.params.id)
+    //     post ? res.status(200).send(post) : next(createError(404, "Blog post not found, check your ID and try again!"))
+    // } catch (error) {
+    //     next(error)
+    // }
     try {
-        const blogs = await getBlogPosts()
-        const post = blogs.find(post => post._id === req.params.id)
-        post ? res.status(200).send(post) : next(createError(404, "Blog post not found, check your ID and try again!"))
+        const blog = await blogModel.findById(req.params.id)
+
+        blog ? res.send(blog) : next(createError(404, "No blog with such ID, check and try again!"))
+        
     } catch (error) {
         next(error)
     }
 })
 
-router.post("/", postValidation, async (req, res, next) => {
+router.post("/", async (req, res, next) => {
+    // try {
+    //     const blogs = await getBlogPosts()
+    //     const errors = validationResult(req)
+
+    //     if (errors.isEmpty()) {
+    //         const post = { ...req.body, _id: uniqid(), createdOn: new Date() }
+    //         blogs.push(post)
+    //         await writeBlogs(blogs)
+
+    //         // await sendEmail(email)
+
+    //         res.status(201).send(post)
+    //     } else {
+    //         next(createError(400, errors))
+    //     }
+    // } catch (error) {
+    //     next(error)
+    // }
+
     try {
-        const blogs = await getBlogPosts()
-        const errors = validationResult(req)
-
-        if (errors.isEmpty()) {
-            const post = { ...req.body, _id: uniqid(), createdOn: new Date() }
-            blogs.push(post)
-            await writeBlogs(blogs)
-
-            // await sendEmail(email)
-
-            res.status(201).send(post)
-        } else {
-            next(createError(400, errors))
-        }
+        const blog = new blogModel({...req.body, createdOn: new Date()})
+        const resp = await blog.save()
+        res.send(resp) 
+        
     } catch (error) {
-        next(error)
+        next(createError(500, "Error whilst retrieving student"))
     }
 })
 
-router.put("/:id", postValidation, async (req, res, next) => {
-    try {
-        const blogs = getBlogPosts()
-        const errors = validationResult(req)
+router.put("/:id", async (req, res, next) => {
+    // try {
+    //     const blogs = getBlogPosts()
+    //     const errors = validationResult(req)
 
-        if (errors.isEmpty()) {
-            const post = blogs.find((post) => post._id === req.params.id)
-            const filtered = blogs.filter(post => post._id !== req.params.id)
-            const updatedPost = { ...req.body, createdOn: post.createdOn, _id: post._id, lastUpdatedOn: new Date() }
-            filtered.push(updatedPost)
-            await writeBlogs(filtered)
-            res.status(200).send(post)
-        } else {
-            next(createError(400, errors))
-        }
+    //     if (errors.isEmpty()) {
+    //         const post = blogs.find((post) => post._id === req.params.id)
+    //         const filtered = blogs.filter(post => post._id !== req.params.id)
+    //         const updatedPost = { ...req.body, createdOn: post.createdOn, _id: post._id, lastUpdatedOn: new Date() }
+    //         filtered.push(updatedPost)
+    //         await writeBlogs(filtered)
+    //         res.status(200).send(post)
+    //     } else {
+    //         next(createError(400, errors))
+    //     }
+    // } catch (error) {
+    //     next(error)
+    // }
+
+    try {
+        const updatedBlog = await blogModel.findByIdAndUpdate(req.params.id, req.body, { runValidators: true, new: true,}) 
+
+        updatedBlog ? res.send(updatedBlog) : next(createError(404, `Student with id ${req.params.id} not found`))
     } catch (error) {
-        next(error)
+        next(createError(500, "Error updating student!"))
     }
 })
 
 router.delete("/:id", async (req, res, next) => {
-    try {
-        const blogs = getBlogPosts()
-        const newPostsArray = blogs.filter(post => post._id !== req.params.id)
-        await writeBlogs(newPostsArray)
+    // try {
+    //     const blogs = getBlogPosts()
+    //     const newPostsArray = blogs.filter(post => post._id !== req.params.id)
+    //     await writeBlogs(newPostsArray)
 
-        res.send(newPostsArray)
+    //     res.send(newPostsArray)
+    // } catch (error) {
+    //     next(error)
+    // }
+
+    try {
+        const deleted = await blogModel.findByIdAndDelete(req.params.id)
+        
+        deleted ? res.send(`Successfuly deleted blog ${req.params.id}`) : next(createError(500, `Blog with id ${req.params.id} not found`))
+        
     } catch (error) {
-        next(error)
+        next(createError(500, "Error whilst deleting blog!"))
     }
 
 })
