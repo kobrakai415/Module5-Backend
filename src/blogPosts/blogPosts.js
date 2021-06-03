@@ -1,11 +1,7 @@
 import express from "express"
-// import fs from "fs"
 import { fileURLToPath } from "url"
 import { dirname, join, extname } from "path"
-import uniqid from "uniqid"
 import createError from "http-errors"
-import { postValidation } from "./validation.js"
-import { validationResult } from "express-validator"
 import multer from "multer"
 import fs from "fs-extra"
 import { getBlogPosts, writeBlogs, writeBlogCovers } from "../helpers/files.js"
@@ -14,8 +10,8 @@ import { CloudinaryStorage } from "multer-storage-cloudinary"
 import { generatePDFStream } from "../helpers/pdf.js"
 import { pipeline } from "stream"
 import { sendEmail } from "../helpers/email.js"
-import blogModel from "../helpers/schema.js"
-import { create } from "domain"
+import blogModel from "../blogPosts/blogsSchema.js"
+import CommentModel from "../comments/commentsSchema.js"
 
 const { readJSON, writeJSON, writeFile, createReadStream } = fs
 
@@ -42,20 +38,20 @@ router.get("/", async (req, res, next) => {
         const blogs = await blogModel.find()
 
         blogs.length > 0 ? res.send(blogs) : next(createError(404, "No blogs available"))
-        
+
     } catch (error) {
         next(error)
-        
+
     }
 })
 
 router.get("/sendEmail", async (req, res, next) => {
     try {
-        
+
         const [response, ...rest] = await sendEmail("kaiwan.kadir@outlook.com")
         console.log(response)
         response.statusCode === 202 ? res.send("Email successfully sent!") : next(error)
-      
+
     } catch (error) {
         next(error)
     }
@@ -70,10 +66,10 @@ router.get("/:id", async (req, res, next) => {
     //     next(error)
     // }
     try {
-        const blog = await blogModel.findById(req.params.id)
+        const blog = await blogModel.findBlog(req.params.id)
 
         blog ? res.send(blog) : next(createError(404, "No blog with such ID, check and try again!"))
-        
+
     } catch (error) {
         next(error)
     }
@@ -100,12 +96,13 @@ router.post("/", async (req, res, next) => {
     // }
 
     try {
-        const blog = new blogModel({...req.body, createdOn: new Date()})
+        const blog = new blogModel({ ...req.body })
         const resp = await blog.save()
-        res.send(resp) 
-        
+        res.send(resp)
+
     } catch (error) {
-        next(createError(500, "Error whilst retrieving student"))
+
+        next(error)
     }
 })
 
@@ -129,7 +126,7 @@ router.put("/:id", async (req, res, next) => {
     // }
 
     try {
-        const updatedBlog = await blogModel.findByIdAndUpdate(req.params.id, req.body, { runValidators: true, new: true,}) 
+        const updatedBlog = await blogModel.findByIdAndUpdate(req.params.id, req.body, { runValidators: true, new: true, })
 
         updatedBlog ? res.send(updatedBlog) : next(createError(404, `Student with id ${req.params.id} not found`))
     } catch (error) {
@@ -150,9 +147,9 @@ router.delete("/:id", async (req, res, next) => {
 
     try {
         const deleted = await blogModel.findByIdAndDelete(req.params.id)
-        
+
         deleted ? res.send(`Successfuly deleted blog ${req.params.id}`) : next(createError(500, `Blog with id ${req.params.id} not found`))
-        
+
     } catch (error) {
         next(createError(500, "Error whilst deleting blog!"))
     }
@@ -169,7 +166,7 @@ const cloudinaryStorage = new CloudinaryStorage({
 
 const upload = multer({
     storage: cloudinaryStorage,
-    
+
 }).single("blogCover")
 
 router.post("/:id/uploadCover", upload, async (req, res, next) => {
@@ -195,20 +192,20 @@ router.post("/:id/uploadCover", upload, async (req, res, next) => {
 
 router.get("/downloadPDF/:id", async (req, res, next) => {
     try {
-    const data = await getBlogPosts()
-    const blogContent = data.find(blog => blog._id === req.params.id.toString())
+        const data = await getBlogPosts()
+        const blogContent = data.find(blog => blog._id === req.params.id.toString())
 
-    if(blogContent) {
-        const source = await generatePDFStream(blogContent)
-        
-        res.setHeader('Content-Disposition', 'attachment; filename="Example.pdf"')
-      
-        pipeline(source, res, error => next(error))
+        if (blogContent) {
+            const source = await generatePDFStream(blogContent)
 
-    } else {
-        next(createError(404, "Blog not found"))
-    }
-        
+            res.setHeader('Content-Disposition', 'attachment; filename="Example.pdf"')
+
+            pipeline(source, res, error => next(error))
+
+        } else {
+            next(createError(404, "Blog not found"))
+        }
+
     } catch (error) {
         next(error)
     }
@@ -216,10 +213,83 @@ router.get("/downloadPDF/:id", async (req, res, next) => {
 
 router.get("/:id/comments", async (req, res, next) => {
 
+    try {
+        const blogComments = await blogModel.GetComments(req.params.id)
+        res.send(blogComments)
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+router.get("/:id/comments/:commentID", async (req, res, next) => {
+
+    try {
+        const comment = await blogModel.findOne(
+            {
+                _id: req.params.id
+            },
+            {
+                comments: { $elemMatch: { _id: req.params.commentID } }
+            }
+        )
+
+        res.send(comment)
+
+    } catch (error) {
+        next(error)
+    }
 })
 
 router.post("/:id/comments", async (req, res, next) => {
+    try {
+        const newComment = new CommentModel({ ...req.body, blogID: req.params.id },)
+
+        const result = await newComment.save()
+
+        await blogModel.findByIdAndUpdate(req.params.id, { $push: { comments: result._id } })
+        res.send(result)
+
+    } catch (error) {
+        next(error)
+    }
 
 })
+
+router.put("/:id/comments/:commentID", async (req, res, next) => {
+    try {
+        const blog = await blogModel.findById(req.params.id)
+
+        if (blog) {
+            const updatedComment = await CommentModel.findOneAndUpdate(
+                { _id: req.params.commentID },
+                { $set: { comment: req.body.comment, rate: req.body.rate } },
+                { runValidators: true, new: true, }
+            )
+            updatedComment ? res.send(200, updatedComment) : next(createError(400, "Failed to update comment"))
+        } else {
+            next(error)
+        }
+
+    } catch (error) {
+        next(error)
+    }
+
+})
+
+router.delete("/:id/comments/:commentID", async (req, res, next) => {
+    try {
+        const deletedComment = await CommentModel.DeleteComment(req.params.commentID)
+
+        const updatedBlog = await blogModel.findOneAndUpdate({ _id: req.params.id }, { $pull: { comments: req.params.commentID } }, { new: true })
+
+        res.send(updatedBlog)
+
+    } catch (error) {
+        next(error)
+    }
+
+})
+
 
 export default router
