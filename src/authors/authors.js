@@ -5,8 +5,8 @@ import multer from "multer"
 import { getAuthors, writeAuthors, writeAuthorAvatars, authorsReadStream } from "../helpers/files.js"
 import { Transform } from "json2csv"
 import { pipeline } from "stream"
-
-
+import AuthorModel from "../authors/authorsSchema.js"
+import q2m from "query-to-mongo"
 const router = express.Router()
 
 
@@ -29,66 +29,68 @@ router.get("/exportCSV", async (req, res, next) => {
 
 })
 
-router.get("/", async (req, res) => {
-    await getAuthors().length > 0 ? res.send(authorsArray) : res.send("No data.")
-    // const authors = await authorModel.find()
-
-    // res.send(authors)
-})
-
-router.get("/:id", async (req, res) => {
-    const authors = await getAuthors()
-
-    const author = authors.find(author => author._id === req.params.id)
-
-    author ? res.send(author) : res.send("Author does not exist, check your author ID")
-})
-
-router.post("/", async (req, res) => {
-    const authors = await getAuthors()
-
-    if (authors.find(author => author.email === req.body.email)) {
-        res.send("email already in use, please try a different email.")
+router.get("/", async (req, res, next) => {
+    try {
+        const query = q2m(req.query)
+        const total = await AuthorModel.countDocuments(query.criteria)
+      
+        const result = await AuthorModel
+            .find(query.criteria)
+            .sort(query.options.sort)
+            .skip(query.options.skip || 0)
+            .limit(query.options.limit || 5)
+        res.status(200).send({ links: query.links("/authors", total), total, result })
+    } catch (error) {
+        next(error)
     }
-    else {
-        const author = req.body
-        author._id = uniqid()
-        author.createdOn = new Date()
-        authors.push(author)
-
-        await writeAuthors(authors)
-
+})
+     
+router.get("/:id", async (req, res, next) => {
+    try {
+        const author = await AuthorModel.findById(req.params.id)
         res.send(author)
+    } catch (error) {
+        next(error)
     }
-// const newAuthor = new authorModel(req.body)
-// const id  = await newAuthor.save()
-// res.send(id)
+})
 
+router.post("/", async (req, res, next) => {
+   try {
+    const newAuthor = new AuthorModel(req.body)
+    const id  = await newAuthor.save()
+    res.send(id)
+   } catch (error) {
+       next(error)
+   }
 
 })
 
 router.put("/:id", async (req, res) => {
-    const authors = await getAuthors()
-    const newAuthorsArray = authors.filter(author => author._id !== req.params.id)
-    const author = authors.find(author => author._id === req.params.id)
+    try {
+        const author = await AuthorModel.findById(req.params.id)
 
-    if (!author) { next(createError(400, "id does not match")) }
+       if ( author ) {
 
-    const updatedAuthor = { ...req.body, createdOn: author.createdOn, _id: author._id, lastUpdatedOn: new Date() }
-    newAuthorsArray.push(updatedAuthor)
+       const updatedAuthor = await AuthorModel.findByIdAndUpdate(req.params.id, req.body, {runvalidators: true, new: true})
+       
+       res.send(updatedAuthor)
+       } else {
+           next(createError(400, "Author not found!"))
+       }
 
-    await writeAuthors(newAuthorsArray)
-
-    res.send(updatedAuthor)
+    } catch (error) {
+        next(error)
+    }
 })
 
 router.delete("/:id", async (req, res) => {
-    const authors = await getAuthors()
-    const newAuthorsArray = authors.filter(author => author._id !== req.params.id)
+   try {
+       const deleted = await AuthorModel.findByIdAndDelete(req.params.id)
 
-    await writeAuthors(newAuthorsArray)
-
-    res.send("Author deleted successfully")
+       deleted ? res.send(deleted) : next(createError(400, "Author not found"))
+   } catch (error) {
+       next(error)
+   }
 })
 
 router.post("/:id/uploadAvatar", multer().single("authorAvatar"), async (req, res, next) => {

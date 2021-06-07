@@ -18,16 +18,16 @@ const blogSchema = new Schema(
             value: Number,
             unit: String,
         },
-        author: {
-            name: String,
-            avatar: String,
+        author:
+        {
+            type: Schema.Types.ObjectId, ref: "Author", required: true
         },
         content: {
             type: String,
             required: true
         },
-        comments: [{ type: Schema.Types.ObjectId, ref: "Comment", required: true, }]
-
+        comments: [{ type: Schema.Types.ObjectId, ref: "Comment", required: true, }],
+        likes: [{type: Schema.Types.ObjectId, ref: "Author" }]
     },
 
     { timestamps: true }
@@ -36,6 +36,15 @@ const blogSchema = new Schema(
 
 /**when blog is deleted you have to delete all comments as well */
 
+
+blogSchema.post("validate", (error, doc, next) => {
+    if (error) {
+        const err = createError(400, error)
+        next(err)
+    } else {
+        next()
+    }
+})
 
 blogSchema.static("findBlog", async function (id) {
     const blog = await this.findOne({ _id: id }).populate("comments")

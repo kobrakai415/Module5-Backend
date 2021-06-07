@@ -147,7 +147,9 @@ router.delete("/:id", async (req, res, next) => {
 
     try {
         const deleted = await blogModel.findByIdAndDelete(req.params.id)
-
+        const deletedComments = await CommentModel.deleteMany({blogID: req.params.id})
+        console.log(deleted)
+        console.log(deletedComments)
         deleted ? res.send(`Successfuly deleted blog ${req.params.id}`) : next(createError(500, `Blog with id ${req.params.id} not found`))
 
     } catch (error) {
@@ -263,7 +265,7 @@ router.put("/:id/comments/:commentID", async (req, res, next) => {
         if (blog) {
             const updatedComment = await CommentModel.findOneAndUpdate(
                 { _id: req.params.commentID },
-                { $set: { comment: req.body.comment, rate: req.body.rate } },
+                 req.body,
                 { runValidators: true, new: true, }
             )
             updatedComment ? res.send(200, updatedComment) : next(createError(400, "Failed to update comment"))
