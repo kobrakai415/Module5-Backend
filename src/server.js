@@ -8,6 +8,7 @@ import postRoutes from "./blogPosts/blogPosts.js"
 import {badRequestErrorHandler, notFoundErrorHandler, forbiddenErrorHandler, catchAllErrorHandler} from "./errorHandlers.js"
 import createError from "http-errors"
 import mongoose from "mongoose"
+import pg from "pg"
 
 const publicFolder = join(dirname(fileURLToPath(import.meta.url)), "../public")
 
@@ -52,4 +53,20 @@ mongoose.connect(process.env.MONGO_CONNECTION, {useNewUrlParser: true, useUnifie
 
 console.table(listEndpoints(server))
 
+export const pool = new pg.Pool();
 
+ 
+
+export async function query(text, params) {
+
+    const start = Date.now();
+
+    const res = await pool.query(text, params);
+
+    const duration = Date.now() - start;
+
+    console.info("Query executed in ", duration, " ms.");
+
+    return res;
+
+}

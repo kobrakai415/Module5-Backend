@@ -33,6 +33,7 @@
     "multer": "^1.4.2",
     "multer-storage-cloudinary": "^4.0.0",
     "pdfmake": "^0.1.71",
+    "pg": "^8.6.0",
     "query": "^0.2.0",
     "query-to-mongo": "^0.10.1",
     "stream": "0.0.2",
