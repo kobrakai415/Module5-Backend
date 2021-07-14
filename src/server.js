@@ -13,7 +13,7 @@ import pg from "pg"
 const publicFolder = join(dirname(fileURLToPath(import.meta.url)), "../public")
 
 const server = express()
-const port = process.env.PORT || 3001
+const port = process.env.PORT || 3000
 
 const whiteList = [process.env.FRONTEND_DEV_URL, process.env.FRONTEND_CLOUD_URL]
 
@@ -55,7 +55,6 @@ console.table(listEndpoints(server))
 
 export const pool = new pg.Pool();
 
- 
 
 export async function query(text, params) {
 

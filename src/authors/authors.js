@@ -1,16 +1,51 @@
 import express from "express"
 import createError from "http-errors"
-import uniqid from "uniqid"
+import basicAuth from "../authentication/basic.js"
 import multer from "multer"
 import { getAuthors, writeAuthors, writeAuthorAvatars, authorsReadStream } from "../helpers/files.js"
 import { Transform } from "json2csv"
 import { pipeline } from "stream"
 import AuthorModel from "../authors/authorsSchema.js"
 import q2m from "query-to-mongo"
+import { LoginValidator } from "../helpers/validators.js"
+import { JWTAuthenticate } from "../authentication/JWT.js"
+import { validationResult } from "express-validator"
+import { JWTAuthMiddleware } from "../authentication/basic.js"
+
 const router = express.Router()
 
+router.post("/signup", async (req, res, next) => {
+    try {
+        const newAuthor = new AuthorModel(req.body)
+        const { id } = await newAuthor.save()
+        res.status(201).send(id)
 
-router.get("/exportCSV", async (req, res, next) => {
+    } catch (error) {
+        next(error)
+    }
+})
+
+router.post("/login", LoginValidator, async (req, res, next) => {
+    try {
+        const errors = validationResult(req)
+        if (!errors.isEmpty()) next(createError(400, errors.mapped()))
+
+        const { email, password } = req.body
+        const user = await AuthorModel.checkCredentials(email, password)
+
+        if (user) {
+            const { accessToken, refreshToken } = await JWTAuthenticate(user)
+            res.send({ accessToken, refreshToken })
+        } else {
+            next(createError(404, "User not found"))
+        }
+
+    } catch (error) {
+        next(error)
+    }
+})
+
+router.get("/exportCSV", JWTAuthMiddleware, async (req, res, next) => {
     try {
         const source = await authorsReadStream()
 
@@ -29,11 +64,11 @@ router.get("/exportCSV", async (req, res, next) => {
 
 })
 
-router.get("/", async (req, res, next) => {
+router.get("/", JWTAuthMiddleware, async (req, res, next) => {
     try {
         const query = q2m(req.query)
         const total = await AuthorModel.countDocuments(query.criteria)
-      
+
         const result = await AuthorModel
             .find(query.criteria)
             .sort(query.options.sort)
@@ -44,56 +79,81 @@ router.get("/", async (req, res, next) => {
         next(error)
     }
 })
-     
-router.get("/:id", async (req, res, next) => {
+
+router.get("/me", JWTAuthMiddleware, async (req, res, next) => {
     try {
-        const author = await AuthorModel.findById(req.params.id)
-        res.send(author)
+        res.send(req.user)
     } catch (error) {
         next(error)
     }
 })
 
-router.post("/", async (req, res, next) => {
-   try {
-    const newAuthor = new AuthorModel(req.body)
-    const id  = await newAuthor.save()
-    res.send(id)
-   } catch (error) {
-       next(error)
-   }
-
-})
-
-router.put("/:id", async (req, res) => {
+router.get("/:id", JWTAuthMiddleware, async (req, res, next) => {
     try {
-        const author = await AuthorModel.findById(req.params.id)
-
-       if ( author ) {
-
-       const updatedAuthor = await AuthorModel.findByIdAndUpdate(req.params.id, req.body, {runvalidators: true, new: true})
-       
-       res.send(updatedAuthor)
-       } else {
-           next(createError(400, "Author not found!"))
-       }
-
+        const user = await AuthorModel.findById(req.params.id)
+        user ? res.send(user) : next(createError(404, "User not found!"))
     } catch (error) {
         next(error)
     }
 })
 
-router.delete("/:id", async (req, res) => {
-   try {
-       const deleted = await AuthorModel.findByIdAndDelete(req.params.id)
+router.post("/", JWTAuthMiddleware, async (req, res, next) => {
+    try {
+        const newAuthor = new AuthorModel(req.body)
+        const id = await newAuthor.save()
+        res.send(id)
+    } catch (error) {
+        next(error)
+    }
 
-       deleted ? res.send(deleted) : next(createError(400, "Author not found"))
-   } catch (error) {
-       next(error)
-   }
 })
 
-router.post("/:id/uploadAvatar", multer().single("authorAvatar"), async (req, res, next) => {
+router.put("/me", JWTAuthMiddleware, async (req, res) => {
+    try {
+        const author = await AuthorModel.findById(req.params.id)
+
+        if (author) {
+
+            const updatedAuthor = await AuthorModel.findByIdAndUpdate(req.params.id, req.body, { runvalidators: true, new: true })
+
+            res.send(updatedAuthor)
+        } else {
+            next(createError(400, "Author not found!"))
+        }
+    } catch (error) {
+        next(error)
+    }
+})
+
+router.put("/:id", JWTAuthMiddleware, async (req, res) => {
+    try {
+        const author = await AuthorModel.findById(req.params.id)
+
+        if (author) {
+
+            const updatedAuthor = await AuthorModel.findByIdAndUpdate(req.params.id, req.body, { runvalidators: true, new: true })
+
+            res.send(updatedAuthor)
+        } else {
+            next(createError(400, "Author not found!"))
+        }
+    } catch (error) {
+        next(error)
+    }
+})
+
+
+router.delete("/:id", JWTAuthMiddleware, async (req, res, next) => {
+    try {
+        const deleted = await AuthorModel.findByIdAndDelete(req.params.id)
+        console.log(deleted)
+        deleted ? res.send(deleted) : next(createError(400, "Author not found"))
+    } catch (error) {
+        next(error)
+    }
+})
+
+router.post("/:id/uploadAvatar", JWTAuthMiddleware, multer().single("authorAvatar"), async (req, res, next) => {
     try {
         console.log(req.file)
         const authors = await getAuthors()
